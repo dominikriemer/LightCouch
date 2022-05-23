@@ -1,3 +1,7 @@
+# 0.3.1 (UNRELEASED)
+- [MAINTENANCE] Bump Gson version to 2.8.9
+- [MAINTENANCE] Test using CouchDB 3.2.2
+
 # 0.3.0 (29/10/2020)
 - [MAINTENANCE] Upgrade to Apache HttpClient 5.0
 - [MAINTENANCE] Upgrade dependencies 
