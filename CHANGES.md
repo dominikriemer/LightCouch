@@ -1,4 +1,6 @@
-# 0.3.2 (UNPUBLISHED)
+# 0.3.3 (UNPUBLISHED)
+
+# 0.3.2 (09/08/2023)
 - [MAINTENANCE] Tested using CouchDB 3.3.2
 - [MAINTENANCE] Bump Apache HTTPCLient to version to 5.2.1
 - [MAINTENANCE] Remove the use of deprecated methods from HTTPClient
