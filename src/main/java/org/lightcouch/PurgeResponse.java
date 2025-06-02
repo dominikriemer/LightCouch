@@ -1,13 +1,13 @@
 package org.lightcouch;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 import java.util.List;
 import java.util.Map;
 
-import com.google.gson.annotations.SerializedName;
-
 public class PurgeResponse {
 
-    @SerializedName("purge_seq")
+    @JsonProperty("purge_seq")
     private String purgeSeq;
     
     public String getPurgeSeq() {

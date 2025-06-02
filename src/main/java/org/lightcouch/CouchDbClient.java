@@ -13,17 +13,6 @@
 
 package org.lightcouch;
 
-import java.io.Closeable;
-import java.io.IOException;
-import java.net.URLDecoder;
-import java.security.KeyManagementException;
-import java.security.KeyStoreException;
-import java.security.NoSuchAlgorithmException;
-import java.security.cert.CertificateException;
-import java.security.cert.X509Certificate;
-
-import javax.net.ssl.SSLContext;
-
 import org.apache.hc.client5.http.auth.AuthCache;
 import org.apache.hc.client5.http.auth.AuthScope;
 import org.apache.hc.client5.http.auth.Credentials;
@@ -59,6 +48,18 @@ import org.apache.hc.core5.ssl.SSLContexts;
 import org.apache.hc.core5.ssl.TrustStrategy;
 import org.apache.hc.core5.util.TimeValue;
 import org.apache.hc.core5.util.Timeout;
+import org.lightcouch.serializer.Serializer;
+
+import javax.net.ssl.SSLContext;
+
+import java.io.Closeable;
+import java.io.IOException;
+import java.net.URLDecoder;
+import java.security.KeyManagementException;
+import java.security.KeyStoreException;
+import java.security.NoSuchAlgorithmException;
+import java.security.cert.CertificateException;
+import java.security.cert.X509Certificate;
 
 /**
  * Presents a <i>client</i> to CouchDB database server.
@@ -83,28 +84,25 @@ import org.apache.hc.core5.util.Timeout;
  * <p>
  * Change Notifications {@link Changes dbClient.changes()}
  * <p>
- * Replication {@link Replication dbClient.replication()} and {@link Replicator dbClient.replicator()}
- * <p>
  * DB server {@link CouchDbContext dbClient.context()}
  * <p>
  * Design documents {@link CouchDbDesign dbClient.design()}
  * 
  * <p>
  * At the end of a client usage; it's useful to call: {@link #shutdown()} to ensure proper release of resources.
- * 
- * @see CouchDbClientAndroid
+ *
  * @since 0.0.2
  * @author Ahmed Yehia
  *
  */
-public class CouchDbClient extends CouchDbClientBase implements Closeable {
+public class CouchDbClient<JoT, JeT> extends CouchDbClientBase<JoT, JeT> implements Closeable {
 
     /**
      * Constructs a new instance of this class, expects a configuration file named <code>couchdb.properties</code> to be
      * available in your application default classpath.
      */
-    public CouchDbClient() {
-        super();
+    public CouchDbClient(Serializer<JoT, JeT> serializer) {
+        super(serializer);
     }
 
     /**
@@ -112,8 +110,9 @@ public class CouchDbClient extends CouchDbClientBase implements Closeable {
      * 
      * @param configFileName The configuration file name.
      */
-    public CouchDbClient(String configFileName) {
-        super(new CouchDbConfig(configFileName));
+    public CouchDbClient(String configFileName,
+                         Serializer<JoT, JeT> serializer) {
+        super(new CouchDbConfig(configFileName), serializer);
     }
 
     /**
@@ -128,9 +127,9 @@ public class CouchDbClient extends CouchDbClientBase implements Closeable {
      * @param password The Password credential
      */
     public CouchDbClient(String dbName, boolean createDbIfNotExist, String protocol, String host, int port,
-            String username, String password) {
+            String username, String password, Serializer<JoT, JeT> serializer) {
         super(new CouchDbConfig(
-                new CouchDbProperties(dbName, createDbIfNotExist, protocol, host, port, username, password)));
+                new CouchDbProperties(dbName, createDbIfNotExist, protocol, host, port, username, password)), serializer);
     }
 
     /**
@@ -139,8 +138,9 @@ public class CouchDbClient extends CouchDbClientBase implements Closeable {
      * @param properties An object containing configuration properties.
      * @see CouchDbProperties
      */
-    public CouchDbClient(CouchDbProperties properties) {
-        super(new CouchDbConfig(properties));
+    public CouchDbClient(CouchDbProperties properties,
+                         Serializer<JoT, JeT> serializer) {
+        super(new CouchDbConfig(properties), serializer);
     }
 
     /**

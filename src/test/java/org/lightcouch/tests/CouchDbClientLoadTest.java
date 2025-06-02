@@ -16,15 +16,16 @@
 
 package org.lightcouch.tests;
 
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Ignore;
 import org.junit.Test;
 import org.lightcouch.CouchDbClient;
 import org.lightcouch.CouchDbProperties;
+import org.lightcouch.serializer.GsonSerializer;
+
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 /**
  * {@link CouchDbClient} load test.
@@ -55,7 +56,7 @@ public class CouchDbClientLoadTest {
 		  .setPort(5984)
 		  .setMaxConnections(MAX_CONNECTIONS);
 		
-		dbClient = new CouchDbClient(properties);
+		dbClient = new CouchDbClient<>(properties, new GsonSerializer());
 	}
 	
 	@AfterClass

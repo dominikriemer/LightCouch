@@ -16,13 +16,13 @@
 
 package org.lightcouch;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import static org.lightcouch.CouchDbUtil.*;
 
 import java.io.InputStream;
 import java.util.Properties;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 
 /**
  * Provides configuration to client instance.
@@ -30,7 +30,7 @@ import org.apache.commons.logging.LogFactory;
  * @author Ahmed Yehia
  */
 class CouchDbConfig {
-	private static final Log log = LogFactory.getLog(CouchDbConfig.class);
+	private static final Logger log = LoggerFactory.getLogger(CouchDbConfig.class);
 	private static final String DEFAULT_FILE = "couchdb.properties";
 
 	private Properties properties = new Properties();

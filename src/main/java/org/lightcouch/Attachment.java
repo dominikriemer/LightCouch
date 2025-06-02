@@ -15,7 +15,7 @@
  */
 package org.lightcouch;
 
-import com.google.gson.annotations.SerializedName;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
 /**
  * Represents an in-line document attachment. 
@@ -26,7 +26,7 @@ import com.google.gson.annotations.SerializedName;
 public class Attachment {
 	
 	private String data;
-	@SerializedName("content_type")
+	@JsonProperty("content_type")
 	private String contentType;
 	private int revpos;
 	private String digest;

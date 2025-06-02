@@ -13,29 +13,6 @@
 
 package org.lightcouch;
 
-import static org.lightcouch.CouchDbUtil.assertNotEmpty;
-import static org.lightcouch.CouchDbUtil.assertNull;
-import static org.lightcouch.CouchDbUtil.close;
-import static org.lightcouch.CouchDbUtil.generateUUID;
-import static org.lightcouch.CouchDbUtil.getAsString;
-import static org.lightcouch.CouchDbUtil.getStream;
-import static org.lightcouch.CouchDbUtil.streamToString;
-import static org.lightcouch.URIBuilder.buildUri;
-
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.io.Reader;
-import java.io.UnsupportedEncodingException;
-import java.lang.reflect.Type;
-import java.net.URI;
-import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hc.client5.http.auth.CredentialsProvider;
 import org.apache.hc.client5.http.classic.HttpClient;
 import org.apache.hc.client5.http.classic.methods.HttpDelete;
@@ -58,51 +35,58 @@ import org.apache.hc.core5.http.io.entity.InputStreamEntity;
 import org.apache.hc.core5.http.io.entity.StringEntity;
 import org.apache.hc.core5.http.message.BasicHeader;
 import org.apache.hc.core5.http.protocol.HttpContext;
+import org.lightcouch.serializer.Serializer;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
-import com.google.gson.JsonArray;
-import com.google.gson.JsonDeserializationContext;
-import com.google.gson.JsonDeserializer;
-import com.google.gson.JsonElement;
-import com.google.gson.JsonObject;
-import com.google.gson.JsonParseException;
-import com.google.gson.JsonParser;
-import com.google.gson.JsonSerializationContext;
-import com.google.gson.JsonSerializer;
-import com.google.gson.reflect.TypeToken;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.Reader;
+import java.net.URI;
+import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+
+import static org.lightcouch.CouchDbUtil.assertNotEmpty;
+import static org.lightcouch.CouchDbUtil.assertNull;
+import static org.lightcouch.CouchDbUtil.close;
+import static org.lightcouch.CouchDbUtil.generateUUID;
+import static org.lightcouch.CouchDbUtil.getStream;
+import static org.lightcouch.CouchDbUtil.streamToString;
+import static org.lightcouch.URIBuilder.buildUri;
 
 /**
  * Contains a client Public API implementation.
  *
  * @see CouchDbClient
- * @see CouchDbClientAndroid
  * @author Ahmed Yehia
  */
-public abstract class CouchDbClientBase {
+public abstract class CouchDbClientBase<JoT, JeT> {
 
-    static final Log log = LogFactory.getLog(CouchDbClient.class);
+    static final Logger log = LoggerFactory.getLogger(CouchDbClient.class);
 
     private URI baseURI;
     private URI dbURI;
-    private Gson gson;
-    private CouchDbContext context;
-    private CouchDbDesign design;
-    private Local local;
+    private Serializer<JoT, JeT> serializer;
+    private CouchDbContext<JoT, JeT> context;
+    private CouchDbDesign<JoT, JeT> design;
     final CloseableHttpClient httpClient;
     final HttpHost host;
 
 	final BasicCredentialsProvider credentialsProvider;
 
-    CouchDbClientBase() {
-        this(new CouchDbConfig());
+    CouchDbClientBase(Serializer<JoT, JeT> serializer) {
+        this(new CouchDbConfig(), serializer);
     }
 
-    CouchDbClientBase(CouchDbConfig config) {
+    CouchDbClientBase(CouchDbConfig config,
+                      Serializer<JoT, JeT> serializer) {
         final CouchDbProperties props = config.getProperties();
         this.credentialsProvider = initializeCredentials(props);
         this.httpClient = createHttpClient(props, credentialsProvider);
-        this.gson = initGson(new GsonBuilder());
+        this.serializer = serializer;
         this.host = new HttpHost(props.getProtocol(), props.getHost(), props.getPort());
 
         final String path = props.getPath() != null ? props.getPath() : "";
@@ -110,9 +94,8 @@ public abstract class CouchDbClientBase {
                 .path(path).build();
         this.dbURI = buildUri(baseURI).path(props.getDbName()).path("/").build();
 
-        this.context = new CouchDbContext(this, props);
-        this.design = new CouchDbDesign(this);
-        this.local = new Local(this);
+        this.context = new CouchDbContext<>(this, props);
+        this.design = new CouchDbDesign<>(this);
     }
 
     // Client(s) provided implementation
@@ -140,7 +123,7 @@ public abstract class CouchDbClientBase {
      *
      * @return {@link CouchDbContext}
      */
-    public CouchDbContext context() {
+    public CouchDbContext<JoT, JeT> context() {
         return context;
     }
 
@@ -149,7 +132,7 @@ public abstract class CouchDbClientBase {
      *
      * @return {@link CouchDbDesign}
      */
-    public CouchDbDesign design() {
+    public CouchDbDesign<JoT, JeT> design() {
         return design;
     }
 
@@ -159,30 +142,8 @@ public abstract class CouchDbClientBase {
      * @param viewId The view id.
      * @return {@link View}
      */
-    public View view(String viewId) {
-        return new View(this, viewId);
-    }
-
-    public Local local() {
-        return local;
-    }
-
-    /**
-     * Provides access to CouchDB <tt>replication</tt> APIs.
-     *
-     * @return {@link Replication}
-     */
-    public Replication replication() {
-        return new Replication(this);
-    }
-
-    /**
-     * Provides access to the <tt>replicator database</tt>.
-     *
-     * @return {@link Replicator}
-     */
-    public Replicator replicator() {
-        return new Replicator(this);
+    public View<JoT, JeT> view(String viewId) {
+        return new View<>(this, viewId);
     }
 
     /**
@@ -190,8 +151,8 @@ public abstract class CouchDbClientBase {
      *
      * @return {@link Changes}
      */
-    public Changes changes() {
-        return new Changes(this);
+    public Changes<JoT, JeT> changes() {
+        return new Changes<>(this);
     }
 
     /**
@@ -205,10 +166,10 @@ public abstract class CouchDbClientBase {
         ClassicHttpResponse response = null;
         Reader reader = null;
         try {
-            String jsonToPurge = getGson().toJson(toPurge);
+            String jsonToPurge = getSerializer().toJson(toPurge);
             response = post(buildUri(getDBUri()).path("_purge").build(), jsonToPurge);
             reader = new InputStreamReader(getStream(response), StandardCharsets.UTF_8);
-            return getGson().fromJson(reader, PurgeResponse.class);
+            return getSerializer().fromJson(reader, PurgeResponse.class);
         } finally {
             close(reader);
             close(response);
@@ -329,14 +290,8 @@ public abstract class CouchDbClientBase {
         try {
             response = post(buildUri(getDBUri()).path("_find").build(), jsonQuery);
             Reader reader = new InputStreamReader(getStream(response), StandardCharsets.UTF_8);
-            
-            JsonArray jsonArray = JsonParser.parseReader(reader).getAsJsonObject().getAsJsonArray("docs");
             List<T> list = new ArrayList<T>();
-            for (JsonElement jsonElem : jsonArray) {
-                JsonElement elem = jsonElem.getAsJsonObject();
-                T t = this.gson.fromJson(elem, classOfT);
-                list.add(t);
-            }
+            serializer.extractDocsToList(reader, classOfT, list);
             return list;
         } finally {
             close(response);
@@ -389,7 +344,7 @@ public abstract class CouchDbClientBase {
         ClassicHttpResponse response = null;
         try {
             URI uri = buildUri(getDBUri()).build();
-            response = post(uri, getGson().toJson(object));
+            response = post(uri, getSerializer().toJson(object));
             return getResponse(response);
         } finally {
             close(response);
@@ -406,7 +361,7 @@ public abstract class CouchDbClientBase {
         ClassicHttpResponse response = null;
         try {
             URI uri = buildUri(getDBUri()).query("batch", "ok").build();
-            response = post(uri, getGson().toJson(object));
+            response = post(uri, getSerializer().toJson(object));
         } finally {
             close(response);
         }
@@ -435,9 +390,9 @@ public abstract class CouchDbClientBase {
      */
     public Response remove(Object object) {
         assertNotEmpty(object, "object");
-        JsonObject jsonObject = getGson().toJsonTree(object).getAsJsonObject();
-        final String id = getAsString(jsonObject, "_id");
-        final String rev = getAsString(jsonObject, "_rev");
+        var jsonObject = serializer.getAsJsonObject(object);
+        final String id = serializer.getId(jsonObject);
+        final String rev = serializer.getRev(jsonObject);
         return remove(id, rev);
     }
 
@@ -468,7 +423,7 @@ public abstract class CouchDbClientBase {
         ClassicHttpResponse response = null;
         try {
             final String newEditsVal = newEdits ? "\"new_edits\": true, " : "\"new_edits\": false, ";
-            final String json = String.format("{%s%s%s}", newEditsVal, "\"docs\": ", getGson().toJson(objects));
+            final String json = String.format("{%s%s%s}", newEditsVal, "\"docs\": ", getSerializer().toJson(objects));
             final URI uri = buildUri(getDBUri()).path("_bulk_docs").build();
             response = post(uri, json);
             return getResponseList(response);
@@ -580,16 +535,7 @@ public abstract class CouchDbClientBase {
         design().synchronizeAllWithDb();
     }
 
-    /**
-     * Sets a {@link GsonBuilder} to create {@link Gson} instance.
-     * <p>
-     * Useful for registering custom serializers/deserializers, such as JodaTime classes.
-     *
-     * @param gsonBuilder The {@link GsonBuilder}
-     */
-    public void setGsonBuilder(GsonBuilder gsonBuilder) {
-        this.gson = initGson(gsonBuilder);
-    }
+
 
     /**
      * @return The base URI.
@@ -606,10 +552,10 @@ public abstract class CouchDbClientBase {
     }
 
     /**
-     * @return The Gson instance.
+     * @return The serializer used by this client.
      */
-    public Gson getGson() {
-        return gson;
+    public Serializer<JoT, JeT> getSerializer() {
+        return serializer;
     }
 
     // End - Public API
@@ -656,8 +602,8 @@ public abstract class CouchDbClientBase {
         InputStream in = null;
         try {
             in = get(uri);
-            return getGson().fromJson(new InputStreamReader(in, "UTF-8"), classType);
-        } catch (UnsupportedEncodingException e) {
+            return getSerializer().fromJson(new InputStreamReader(in, "UTF-8"), classType);
+        } catch (IOException e) {
             throw new CouchDbException(e);
         } finally {
             close(in);
@@ -673,8 +619,8 @@ public abstract class CouchDbClientBase {
         InputStream in = null;
         try {
             in = get(uri, headers);
-            return getGson().fromJson(new InputStreamReader(in, "UTF-8"), classType);
-        } catch (UnsupportedEncodingException e) {
+            return getSerializer().fromJson(new InputStreamReader(in, "UTF-8"), classType);
+        } catch (IOException e) {
             throw new CouchDbException(e);
         } finally {
             close(in);
@@ -699,9 +645,9 @@ public abstract class CouchDbClientBase {
         assertNotEmpty(object, "object");
         ClassicHttpResponse response = null;
         try {
-            final JsonObject json = getGson().toJsonTree(object).getAsJsonObject();
-            String id = getAsString(json, "_id");
-            String rev = getAsString(json, "_rev");
+            JoT json = getSerializer().getAsJsonObject(object);
+            String id = getSerializer().getId(json);
+            String rev = getSerializer().getRev(json);
             if (newEntity) { // save
                 assertNull(rev, "rev");
                 id = (id == null) ? generateUUID() : id;
@@ -767,8 +713,8 @@ public abstract class CouchDbClientBase {
         InputStream in = null;
         try {
             in = getStream(post(uri, json));
-            return getGson().fromJson(new InputStreamReader(in, "UTF-8"), classType);
-        } catch (UnsupportedEncodingException e) {
+            return getSerializer().fromJson(new InputStreamReader(in, "UTF-8"), classType);
+        } catch (IOException e) {
             throw new CouchDbException(e);
         } finally {
             close(in);
@@ -827,7 +773,7 @@ public abstract class CouchDbClientBase {
      */
     private Response getResponse(ClassicHttpResponse response) throws CouchDbException {
         InputStreamReader reader = new InputStreamReader(getStream(response), StandardCharsets.UTF_8);
-        return getGson().fromJson(reader, Response.class);
+        return getSerializer().fromJson(reader, Response.class);
     }
 
     /**
@@ -837,7 +783,7 @@ public abstract class CouchDbClientBase {
     private List<Response> getResponseList(ClassicHttpResponse response) throws CouchDbException {
         InputStream instream = getStream(response);
         Reader reader = new InputStreamReader(instream, StandardCharsets.UTF_8);
-        return getGson().fromJson(reader, new TypeToken<List<Response>>() {}.getType());
+        return getSerializer().deserializeAsList(reader, Response.class);
     }
 
     /**
@@ -851,26 +797,7 @@ public abstract class CouchDbClientBase {
         httpRequest.setEntity(entity);
     }
 
-    /**
-     * Builds {@link Gson} and registers any required serializer/deserializer.
-     *
-     * @return {@link Gson} instance
-     */
-    private Gson initGson(GsonBuilder gsonBuilder) {
-        gsonBuilder.registerTypeAdapter(JsonObject.class, new JsonDeserializer<JsonObject>() {
-            public JsonObject deserialize(JsonElement json, Type typeOfT, JsonDeserializationContext context)
-                    throws JsonParseException {
-                return json.getAsJsonObject();
-            }
-        });
-        gsonBuilder.registerTypeAdapter(JsonObject.class, new JsonSerializer<JsonObject>() {
-            public JsonElement serialize(JsonObject src, Type typeOfSrc, JsonSerializationContext context) {
-                return src.getAsJsonObject();
-            }
 
-        });
-        return gsonBuilder.create();
-    }
 
     /**
      * @param <T>       Object type.

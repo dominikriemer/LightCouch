@@ -13,16 +13,6 @@
 
 package org.lightcouch.tests;
 
-import static org.hamcrest.CoreMatchers.is;
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
-
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-
 import org.junit.Assume;
 import org.junit.Test;
 import org.lightcouch.Changes;
@@ -31,7 +21,15 @@ import org.lightcouch.ChangesResult.Row;
 import org.lightcouch.CouchDbInfo;
 import org.lightcouch.Response;
 
-import com.google.gson.JsonObject;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+
+import static org.hamcrest.CoreMatchers.is;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
 
 public class ChangeNotificationsTest extends CouchDbTestBase {
 
@@ -46,7 +44,7 @@ public class ChangeNotificationsTest extends CouchDbTestBase {
         for (Row row : rows) {
             List<ChangesResult.Row.Rev> revs = row.getChanges();
             String docId = row.getId();
-            JsonObject doc = row.getDoc();
+            var doc = row.getDoc();
 
             assertNotNull(revs);
             assertNotNull(docId);
@@ -74,7 +72,7 @@ public class ChangeNotificationsTest extends CouchDbTestBase {
         for (Row row : rows) {
             List<ChangesResult.Row.Rev> revs = row.getChanges();
             String docId = row.getId();
-            JsonObject doc = row.getDoc();
+            var doc = row.getDoc();
             if (row.getSeq() != null)
                 seqs++;
 
@@ -101,7 +99,7 @@ public class ChangeNotificationsTest extends CouchDbTestBase {
         for (Row row : rows) {
             List<ChangesResult.Row.Rev> revs = row.getChanges();
             String docId = row.getId();
-            JsonObject doc = row.getDoc();
+            var doc = row.getDoc();
 
             assertNotNull(revs);
             assertNotNull(docId);
@@ -128,7 +126,7 @@ public class ChangeNotificationsTest extends CouchDbTestBase {
         for (Row row : rows) {
             List<ChangesResult.Row.Rev> revs = row.getChanges();
             String docId = row.getId();
-            JsonObject doc = row.getDoc();
+            var doc = row.getDoc();
 
             assertNotNull(revs);
             assertNotNull(docId);
@@ -186,7 +184,7 @@ public class ChangeNotificationsTest extends CouchDbTestBase {
 
         while (changes.hasNext()) {
             ChangesResult.Row feed = changes.next();
-            final JsonObject feedObject = feed.getDoc();
+            final var feedObject = feed.getDoc();
             final String docId = feed.getId();
 
             assertEquals(response.getId(), docId);
@@ -213,7 +211,7 @@ public class ChangeNotificationsTest extends CouchDbTestBase {
 
         while (changes.hasNext()) {
             ChangesResult.Row feed = changes.next();
-            final JsonObject feedObject = feed.getDoc();
+            final var feedObject = feed.getDoc();
             final String docId = feed.getId();
             System.out.println("next()=" + docId);
 

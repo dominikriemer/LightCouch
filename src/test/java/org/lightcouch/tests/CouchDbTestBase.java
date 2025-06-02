@@ -1,19 +1,20 @@
 package org.lightcouch.tests;
 
+import com.github.zafarkhaja.semver.Version;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.lightcouch.CouchDbClient;
-
-import com.github.zafarkhaja.semver.Version;
+import org.lightcouch.serializer.GsonSerializer;
+import org.lightcouch.serializer.JacksonSerializer;
 
 public class CouchDbTestBase {
 
-    protected static CouchDbClient dbClient;
+    protected static CouchDbClient<?, ?> dbClient;
     protected static CouchDbConfigTest dbClientConfig; 
 
     @BeforeClass
     public static void setUpClass() {
-        dbClient = new CouchDbClient();
+        dbClient = new CouchDbClient<>(new JacksonSerializer());
         dbClientConfig = new CouchDbConfigTest();
     }
 

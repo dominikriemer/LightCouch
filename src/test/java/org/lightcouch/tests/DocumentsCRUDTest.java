@@ -16,10 +16,12 @@
 
 package org.lightcouch.tests;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import com.google.gson.JsonObject;
+import org.junit.Test;
+import org.lightcouch.DocumentConflictException;
+import org.lightcouch.NoDocumentException;
+import org.lightcouch.Params;
+import org.lightcouch.Response;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -27,14 +29,10 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 
-import org.junit.Test;
-import org.lightcouch.DocumentConflictException;
-import org.lightcouch.NoDocumentException;
-import org.lightcouch.Params;
-import org.lightcouch.Response;
-
-import com.google.gson.JsonArray;
-import com.google.gson.JsonObject;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
 
 public class DocumentsCRUDTest extends CouchDbTestBase {
 
@@ -126,14 +124,6 @@ public class DocumentsCRUDTest extends CouchDbTestBase {
 		map.put("_id", generateUUID());
 		map.put("field1", "value1");
 		dbClient.save(map);
-	}
-
-	@Test
-	public void saveJsonObject() {
-		JsonObject json = new JsonObject();
-		json.addProperty("_id", generateUUID());
-		json.add("json-array", new JsonArray());
-		dbClient.save(json);
 	}
 	
 	@Test

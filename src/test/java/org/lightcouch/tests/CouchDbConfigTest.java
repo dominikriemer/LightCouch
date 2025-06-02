@@ -3,13 +3,12 @@ package org.lightcouch.tests;
 import java.io.InputStream;
 import java.util.Properties;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-
 import org.lightcouch.CouchDbProperties;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 class CouchDbConfigTest {
-	private static final Log log = LogFactory.getLog(CouchDbConfigTest.class);
+	private static final Logger log = LoggerFactory.getLogger(CouchDbConfigTest.class);
 	private static final String DEFAULT_FILE = "couchdb.properties";
 
 	private Properties properties = new Properties();

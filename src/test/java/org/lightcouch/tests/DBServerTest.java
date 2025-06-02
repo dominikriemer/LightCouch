@@ -16,15 +16,15 @@
 
 package org.lightcouch.tests;
 
-import static org.hamcrest.CoreMatchers.is;
-import static org.hamcrest.CoreMatchers.not;
-import static org.junit.Assert.assertNotNull;
-import static org.hamcrest.MatcherAssert.assertThat;
+import org.junit.Test;
+import org.lightcouch.CouchDbInfo;
 
 import java.util.List;
 
-import org.junit.Test;
-import org.lightcouch.CouchDbInfo;
+import static org.hamcrest.CoreMatchers.is;
+import static org.hamcrest.CoreMatchers.not;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.junit.Assert.assertNotNull;
 
 public class DBServerTest extends CouchDbTestBase {
 
@@ -62,11 +62,5 @@ public class DBServerTest extends CouchDbTestBase {
   @Test
   public void ensureFullCommit() {
     dbClient.context().ensureFullCommit();
-  }
-
-  @Test
-  public void uuids() {
-    List<String> uuids = dbClient.context().uuids(10);
-    assertThat(uuids.size(), is(10));
   }
 }

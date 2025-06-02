@@ -16,10 +16,10 @@
 
 package org.lightcouch;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 import java.util.ArrayList;
 import java.util.List;
-
-import com.google.gson.annotations.SerializedName;
 
 /**
  * Holds a view result entries. 
@@ -29,9 +29,9 @@ import com.google.gson.annotations.SerializedName;
  */
 public class ViewResult<K, V, T> {
 	
-	@SerializedName("total_rows")
+	@JsonProperty("total_rows")
 	private long totalRows; 
-	@SerializedName("update_seq")
+	@JsonProperty("update_seq")
 	private String updateSeq; 
 	private int offset;
 	private List<Rows> rows = new ArrayList<Rows>();

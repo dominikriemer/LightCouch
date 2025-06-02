@@ -17,7 +17,7 @@
 
 package org.lightcouch;
 
-import com.google.gson.annotations.SerializedName;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
 /**
  * Holds information about a CouchDB database instance.
@@ -26,23 +26,23 @@ import com.google.gson.annotations.SerializedName;
  */
 public class CouchDbInfo {
 
-  @SerializedName("db_name")
+  @JsonProperty("db_name")
   private String dbName;
-  @SerializedName("doc_count")
+  @JsonProperty("doc_count")
   private long docCount;
-  @SerializedName("doc_del_count")
+  @JsonProperty("doc_del_count")
   private String docDelCount;
-  @SerializedName("update_seq")
+  @JsonProperty("update_seq")
   private String updateSeq;
-  @SerializedName("purge_seq")
+  @JsonProperty("purge_seq")
   private String purgeSeq;
-  @SerializedName("compact_running")
+  @JsonProperty("compact_running")
   private boolean compactRunning;
-  @SerializedName("disk_size")
+  @JsonProperty("disk_size")
   private long diskSize;
-  @SerializedName("instance_start_time")
+  @JsonProperty("instance_start_time")
   private long instanceStartTime;
-  @SerializedName("disk_format_version")
+  @JsonProperty("disk_format_version")
   private int diskFormatVersion;
 
   private CouchDbInfoCluster cluster;

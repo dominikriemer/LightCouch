@@ -16,17 +16,7 @@
 
 package org.lightcouch.tests;
 
-import static org.hamcrest.CoreMatchers.is;
-import static org.hamcrest.CoreMatchers.not;
-import static org.junit.Assert.assertFalse;
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.junit.Assert.assertTrue;
-
-import java.util.Arrays;
-import java.util.List;
-import java.util.UUID;
-import java.util.Vector;
-
+import com.google.gson.JsonObject;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.lightcouch.CouchDbClient;
@@ -36,14 +26,24 @@ import org.lightcouch.DocumentConflictException;
 import org.lightcouch.NoDocumentException;
 import org.lightcouch.Page;
 import org.lightcouch.ViewResult;
+import org.lightcouch.serializer.GsonSerializer;
 
-import com.google.gson.JsonObject;
+import java.util.Arrays;
+import java.util.List;
+import java.util.UUID;
+import java.util.Vector;
+
+import static org.hamcrest.CoreMatchers.is;
+import static org.hamcrest.CoreMatchers.not;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 
 public class ViewsTest extends CouchDbTestBase {
 
 	@BeforeClass
 	public static void setUpClass() {
-		dbClient = new CouchDbClient();
+		dbClient = new CouchDbClient<>(new GsonSerializer());
 		dbClient.syncDesignDocsWithDb();
 		
 		init(); 

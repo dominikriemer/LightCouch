@@ -1,12 +1,12 @@
 package org.lightcouch.tests;
 
+import org.lightcouch.Attachment;
+
 import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-
-import org.lightcouch.Attachment;
 
 public class Foo {
 	
@@ -125,6 +125,10 @@ public class Foo {
 
 	public void set_revs_info(List<RevInfo> _revs_info) {
 		this._revs_info = _revs_info;
+	}
+
+	public String getType() {
+		return Type;
 	}
 
 	@Override

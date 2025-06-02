@@ -13,21 +13,20 @@
 
 package org.lightcouch;
 
+import org.apache.hc.client5.http.classic.methods.HttpGet;
+import org.apache.hc.client5.http.classic.methods.HttpPost;
+import org.apache.hc.client5.http.classic.methods.HttpUriRequest;
+import org.lightcouch.ChangesResult.Row;
+import org.lightcouch.serializer.Serializer;
+
 import java.io.BufferedReader;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
+import java.util.HashMap;
 import java.util.List;
-
-import org.apache.hc.client5.http.classic.methods.HttpGet;
-import org.apache.hc.client5.http.classic.methods.HttpPost;
-import org.apache.hc.client5.http.classic.methods.HttpUriRequest;
-import org.lightcouch.ChangesResult.Row;
-
-import com.google.gson.Gson;
-import com.google.gson.JsonArray;
-import com.google.gson.JsonObject;
+import java.util.Map;
 
 /**
  * <p>
@@ -74,24 +73,24 @@ import com.google.gson.JsonObject;
  * @since 0.0.2
  * @author Ahmed Yehia
  */
-public class Changes {
+public class Changes<JoT, JeT> {
 
     private BufferedReader reader;
     private HttpUriRequest httpRequest;
     private Row nextRow;
     private boolean stop;
 
-    private CouchDbClientBase dbc;
-    private Gson gson;
+    private CouchDbClientBase<JoT, JeT> dbc;
+    private Serializer<JoT, JeT> serializer;
     private URIBuilder uriBuilder;
 
     private String filter;
     private String selector;
     private List<String> docIds;
 
-    Changes(CouchDbClientBase dbc) {
+    Changes(CouchDbClientBase<JoT, JeT> dbc) {
         this.dbc = dbc;
-        this.gson = dbc.getGson();
+        this.serializer = dbc.getSerializer();
         this.uriBuilder = URIBuilder.buildUri(dbc.getDBUri()).path("_changes");
     }
 
@@ -155,13 +154,9 @@ public class Changes {
         } else {
             String json = selector;
             if (docIds != null) {
-                JsonObject docIdsJson = new JsonObject();
-                JsonArray jArray = new JsonArray();
-                for (String id : docIds) {
-                    jArray.add(id);
-                }
-                docIdsJson.add("doc_ids", jArray);
-                json = docIdsJson.toString();
+                Map<String, Object> docIdsJson = new HashMap<>();
+                docIdsJson.put("doc_ids", docIds);
+                json = serializer.toJson(docIdsJson);
             }
 
             return dbc.post(uri, json, ChangesResult.class);
@@ -248,7 +243,7 @@ public class Changes {
 
                 if (!stop) {
                     if (!row.startsWith("{\"last_seq\":")) {
-                        setNextRow(gson.fromJson(row, Row.class));
+                        setNextRow(serializer.fromJson(row, Row.class));
                         hasNext = true;
                     }
                 }

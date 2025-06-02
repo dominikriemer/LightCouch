@@ -17,7 +17,8 @@
 
 package org.lightcouch;
 
-import static java.lang.String.format;
+import org.apache.hc.core5.http.ClassicHttpResponse;
+import org.apache.hc.core5.http.HttpResponse;
 
 import java.io.Closeable;
 import java.io.File;
@@ -37,12 +38,7 @@ import java.util.UUID;
 import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
 
-import org.apache.hc.core5.http.ClassicHttpResponse;
-import org.apache.hc.core5.http.HttpResponse;
-
-import com.google.gson.Gson;
-import com.google.gson.JsonElement;
-import com.google.gson.JsonObject;
+import static java.lang.String.format;
 
 /**
  * Provides various utility methods, for internal use.
@@ -84,33 +80,6 @@ final class CouchDbUtil {
 	
 	public static String generateUUID() {
 		return UUID.randomUUID().toString().replace("-", "");
-	}
-	
-	// JSON
-	
-	public static <T> T JsonToObject(Gson gson, JsonElement elem, String key, Class<T> classType) {
-		return gson.fromJson(elem.getAsJsonObject().get(key), classType);
-	}
-
-	/**
-	 * @return A JSON element as a String, or null if not found.
-	 */
-	public static String getAsString(JsonObject j, String e) {
-		return (j.get(e) == null || j.get(e).isJsonNull()) ? null : j.get(e).getAsString();  
-	}
-	
-	/**
-	 * @return A JSON element as <code>long</code>, or <code>0</code> if not found.
-	 */
-	public static long getAsLong(JsonObject j, String e) {
-		return (j.get(e) == null || j.get(e).isJsonNull()) ? 0L : j.get(e).getAsLong();
-	}
-	
-	/**
-	 * @return A JSON element as <code>int</code>, or <code>0</code> if not found.
-	 */
-	public static int getAsInt(JsonObject j, String e) {
-		return (j.get(e) == null || j.get(e).isJsonNull()) ? 0 : j.get(e).getAsInt();
 	}
 	
 	// Files

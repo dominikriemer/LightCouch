@@ -17,25 +17,21 @@
 
 package org.lightcouch;
 
-import static org.lightcouch.CouchDbUtil.*;
-import static org.lightcouch.URIBuilder.*;
+import org.apache.hc.client5.http.classic.methods.HttpPut;
+import org.apache.hc.core5.http.ClassicHttpResponse;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.Reader;
-import java.lang.reflect.Type;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.hc.client5.http.classic.methods.HttpPut;
-import org.apache.hc.core5.http.ClassicHttpResponse;
-
-import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
-import com.google.gson.reflect.TypeToken;
+import static org.lightcouch.CouchDbUtil.assertNotEmpty;
+import static org.lightcouch.CouchDbUtil.close;
+import static org.lightcouch.URIBuilder.buildUri;
 
 /**
  * Contains database server specific APIs.
@@ -44,13 +40,13 @@ import com.google.gson.reflect.TypeToken;
  * @since 0.0.2
  * @author Ahmed Yehia
  */
-public class CouchDbContext {
+public class CouchDbContext<JoT, JeT> {
 
-	private static final Log log = LogFactory.getLog(CouchDbClient.class);
+	private static final Logger log = LoggerFactory.getLogger(CouchDbContext.class);
 
-	private CouchDbClientBase dbc;
+	private CouchDbClientBase<JoT, JeT> dbc;
 
-	CouchDbContext(CouchDbClientBase dbc, CouchDbProperties props) {
+	CouchDbContext(CouchDbClientBase<JoT, JeT> dbc, CouchDbProperties props) {
 		this.dbc = dbc;
 		if (props.isCreateDbIfNotExist()) {
 			createDB(props.getDbName());
@@ -112,10 +108,9 @@ public class CouchDbContext {
 	public List<String> getAllDbs() {
 		InputStream instream = null;
 		try {
-			Type typeOfList = new TypeToken<List<String>>() {}.getType();
 			instream = dbc.get(buildUri(dbc.getBaseUri()).path("_all_dbs").build());
 			Reader reader = new InputStreamReader(instream, StandardCharsets.UTF_8);
-			return dbc.getGson().fromJson(reader, typeOfList);
+			return dbc.getSerializer().deserializeAsList(reader, String.class);
 		} finally {
 			close(instream);
 		}
@@ -136,7 +131,7 @@ public class CouchDbContext {
 		try {
 			instream = dbc.get(buildUri(dbc.getBaseUri()).build());
 			Reader reader = new InputStreamReader(instream, StandardCharsets.UTF_8);
-			return getAsString(JsonParser.parseReader(reader).getAsJsonObject(), "version");
+			return dbc.getSerializer().getKeyFromObject(reader, "version");
 		} finally {
 			close(instream);
 		}
@@ -167,17 +162,6 @@ public class CouchDbContext {
 	}
 	
 	/**
-	 * Request a database sends a list of UUIDs.
-	 * @param count The count of UUIDs.
-	 * @return a list of UUIDs
-	 */
-	public List<String> uuids(long count) {
-		final String uri = String.format("%s_uuids?count=%d", dbc.getBaseUri(), count);
-		final JsonObject json = dbc.findAny(JsonObject.class, uri);
-		return dbc.getGson().fromJson(json.get("uuids").toString(), new TypeToken<List<String>>(){}.getType());
-	}
-	
-	/**
 	 * Request all database update events in the CouchDB instance.
 	 * @param since
 	 * @return a list of all database events in the CouchDB instance
@@ -191,7 +175,7 @@ public class CouchDbContext {
 			}
 			instream = dbc.get(builder.build());
 			Reader reader = new InputStreamReader(instream, StandardCharsets.UTF_8);
-			return dbc.getGson().fromJson(reader, DbUpdates.class);
+			return dbc.getSerializer().fromJson(reader, DbUpdates.class);
 		} finally {
 			close(instream);
 		}

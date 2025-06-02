@@ -16,10 +16,10 @@
 
 package org.lightcouch;
 
-import java.util.List;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
-import com.google.gson.JsonObject;
-import com.google.gson.annotations.SerializedName;
+import java.util.List;
+import java.util.Map;
 
 /**
  * Represents Changes feed result of type <i>normal</i>.
@@ -30,7 +30,7 @@ import com.google.gson.annotations.SerializedName;
  */
 public class ChangesResult {
 	private List<ChangesResult.Row> results;
-	@SerializedName("last_seq")
+	@JsonProperty("last_seq")
 	private String lastSeq;
 
 	public List<ChangesResult.Row> getResults() {
@@ -49,7 +49,7 @@ public class ChangesResult {
 		private String id;
 		private List<Row.Rev> changes;
 		private boolean deleted;
-		private JsonObject doc;
+		private Map<String, Object> doc;
 
 		public String getSeq() {
 			return seq;
@@ -67,7 +67,7 @@ public class ChangesResult {
 			return deleted;
 		}
 
-		public JsonObject getDoc() {
+		public Map<String, Object> getDoc() {
 			return doc;
 		}
 

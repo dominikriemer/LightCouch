@@ -15,11 +15,11 @@
  */
 package org.lightcouch;
 
-import com.google.gson.annotations.SerializedName;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
 public class DbUpdatesResult {
 
-	@SerializedName("db_name")
+	@JsonProperty("db_name")
 	private String dbName;
 
 	private String type;

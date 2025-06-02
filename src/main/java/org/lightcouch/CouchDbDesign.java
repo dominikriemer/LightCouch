@@ -17,6 +17,15 @@
 
 package org.lightcouch;
 
+import org.apache.hc.core5.http.ClassicHttpResponse;
+import org.lightcouch.DesignDocument.MapReduce;
+
+import java.net.URI;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
 import static java.lang.String.format;
 import static org.lightcouch.CouchDbUtil.assertNotEmpty;
 import static org.lightcouch.CouchDbUtil.assertTrue;
@@ -25,18 +34,6 @@ import static org.lightcouch.CouchDbUtil.listResources;
 import static org.lightcouch.CouchDbUtil.readFile;
 import static org.lightcouch.CouchDbUtil.removeExtension;
 import static org.lightcouch.URIBuilder.buildUri;
-
-import java.net.URI;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-
-import org.apache.hc.core5.http.ClassicHttpResponse;
-import org.lightcouch.DesignDocument.MapReduce;
-
-import com.google.gson.JsonArray;
-import com.google.gson.JsonObject;
 
 /**
  * Provides API to work with design documents. 
@@ -58,7 +55,7 @@ import com.google.gson.JsonObject;
  * @since 0.0.2
  * @author Ahmed Yehia
  */
-public class CouchDbDesign {
+public class CouchDbDesign<JoT, JeT> {
 	
 	private static final String DESIGN_DOCS_DIR = "design-docs";
 	private static final String JAVASCRIPT      = "javascript";
@@ -75,9 +72,9 @@ public class CouchDbDesign {
 	private static final String MAP_JS          = "map.js";
 	private static final String REDUCE_JS       = "reduce.js";
 	
-	private CouchDbClientBase dbc;
+	private CouchDbClientBase<JoT, JeT> dbc;
 	
-	CouchDbDesign(CouchDbClientBase dbc) {
+	CouchDbDesign(CouchDbClientBase<JoT, JeT> dbc) {
 		this.dbc = dbc;
 	}
 	
@@ -215,9 +212,9 @@ public class CouchDbDesign {
 		dd.setLists(populateMap(rootPath, elements, LISTS));
 		dd.setUpdates(populateMap(rootPath, elements, UPDATES));
 		dd.setValidateDocUpdate(readContent(elements, rootPath, VALIDATE_DOC));
-		dd.setRewrites(dbc.getGson().fromJson(readContent(elements, rootPath, REWRITES), JsonArray.class));
-		dd.setFulltext(dbc.getGson().fromJson(readContent(elements, rootPath, FULLTEXT), JsonObject.class));
-		dd.setIndexes(dbc.getGson().fromJson(readContent(elements, rootPath, INDEXES), JsonObject.class));
+		dd.setRewrites(dbc.getSerializer().deserializeAsGenericList(readContent(elements, rootPath, REWRITES)));
+		dd.setFulltext(dbc.getSerializer().deserializeAsGenericMap(readContent(elements, rootPath, FULLTEXT)));
+		dd.setIndexes(dbc.getSerializer().deserializeAsGenericMap(readContent(elements, rootPath, INDEXES)));
 		return dd;
 	}
 	

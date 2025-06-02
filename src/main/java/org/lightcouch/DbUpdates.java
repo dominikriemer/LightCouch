@@ -15,15 +15,15 @@
  */
 package org.lightcouch;
 
-import java.util.List;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
-import com.google.gson.annotations.SerializedName;
+import java.util.List;
 
 public class DbUpdates {
 
 	private List<DbUpdatesResult> results;
 
-	@SerializedName("last_seq")
+	@JsonProperty("last_seq")
 	private String lastSeq;
 
 	public List<DbUpdatesResult> getResults() {

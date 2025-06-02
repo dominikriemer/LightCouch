@@ -16,10 +16,10 @@
 
 package org.lightcouch;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 import java.util.HashMap;
 import java.util.Map;
-
-import com.google.gson.annotations.SerializedName;
 
 /**
  * Convenient base class for CouchDB documents, defines the basic 
@@ -30,11 +30,11 @@ import com.google.gson.annotations.SerializedName;
  */
 public class Document {
 	
-	@SerializedName("_id")
+	@JsonProperty("_id")
 	private String id;
-	@SerializedName("_rev")
+	@JsonProperty("_rev")
 	private String revision;
-	@SerializedName("_attachments")
+	@JsonProperty("_attachments")
 	private Map<String, Attachment> attachments; 
 
 	public String getId() {

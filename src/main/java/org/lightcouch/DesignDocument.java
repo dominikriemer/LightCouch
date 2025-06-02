@@ -16,11 +16,10 @@
 
 package org.lightcouch;
 
-import java.util.Map;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
-import com.google.gson.JsonArray;
-import com.google.gson.JsonObject;
-import com.google.gson.annotations.SerializedName;
+import java.util.List;
+import java.util.Map;
 
 /**
  * Represents a design document.
@@ -32,15 +31,15 @@ public class DesignDocument extends Document {
 	
 	private String language;
 	private Map<String, MapReduce> views;
-	@SerializedName("validate_doc_update")
+	@JsonProperty("validate_doc_update")
 	private String validateDocUpdate;
 	private Map<String, String> filters;
 	private Map<String, String> shows;
 	private Map<String, String> lists;
 	private Map<String, String> updates;
-	private JsonArray rewrites;
-	private JsonObject fulltext;
-	private JsonObject indexes;
+	private List<Map<String, Object>> rewrites;
+	private Map<String, Object> fulltext;
+	private Map<String, Object> indexes;
 
 	public String getLanguage() {
 		return language;
@@ -54,15 +53,15 @@ public class DesignDocument extends Document {
 		return validateDocUpdate;
 	}
 	
-	public JsonArray getRewrites() {
+	public List<Map<String, Object>> getRewrites() {
 		return rewrites;
 	}
 	
-	public JsonObject getFulltext() {
+	public Map<String, Object> getFulltext() {
 		return fulltext;
 	}
 	
-	public JsonObject getIndexes() {
+	public Map<String, Object> getIndexes() {
 		return indexes;
 	}
 
@@ -94,15 +93,15 @@ public class DesignDocument extends Document {
 		this.validateDocUpdate = validateDocUpdate;
 	}
 	
-	public void setRewrites(JsonArray rewrites) {
+	public void setRewrites(List<Map<String, Object>> rewrites) {
 		this.rewrites = rewrites;
 	}
 	
-	public void setFulltext(JsonObject fulltext) {
+	public void setFulltext(Map<String, Object> fulltext) {
 		this.fulltext = fulltext;
 	}
 	
-	public void setIndexes(JsonObject indexes) {
+	public void setIndexes(Map<String, Object> indexes) {
 		this.indexes = indexes;
 	}
 

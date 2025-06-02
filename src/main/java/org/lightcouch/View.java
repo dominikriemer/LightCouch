@@ -16,7 +16,9 @@
 
 package org.lightcouch;
 
-import static org.lightcouch.CouchDbUtil.*;
+import org.lightcouch.serializer.Serializer;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -24,18 +26,14 @@ import java.io.Reader;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.Base64;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 
-import java.util.Base64;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-
-import com.google.gson.Gson;
-import com.google.gson.JsonArray;
-import com.google.gson.JsonElement;
-import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
+import static org.lightcouch.CouchDbUtil.assertNotEmpty;
+import static org.lightcouch.CouchDbUtil.close;
+import static org.lightcouch.CouchDbUtil.getStream;
 
 /**
  * This class provides access to the <tt>View</tt> APIs.
@@ -65,8 +63,8 @@ import com.google.gson.JsonParser;
  * @since 0.0.2
  * @author Ahmed Yehia
  */
-public class View {
-	private static final Log log = LogFactory.getLog(CouchDbClient.class);
+public class View<JoT, JeT> {
+	private static final Logger log = LoggerFactory.getLogger(View.class);
 	
 	// paging param fields
 	private static final String START_KEY                = "s_k";
@@ -95,16 +93,16 @@ public class View {
 	private Boolean inclusiveEnd;
 	private Boolean updateSeq;
 	
-	private CouchDbClientBase dbc;
-	private Gson gson;
+	private CouchDbClientBase<JoT, JeT> dbc;
+	private Serializer<JoT, JeT> serializer;
 	private URIBuilder uriBuilder;
 	
 	private String allDocsKeys; // bulk docs
 	
-	View(CouchDbClientBase dbc, String viewId) {
+	View(CouchDbClientBase<JoT, JeT> dbc, String viewId) {
 		assertNotEmpty(viewId, "View id");
 		this.dbc = dbc;
-		this.gson = dbc.getGson();
+		this.serializer = dbc.getSerializer();
 		
 		String view = viewId;
 		if(viewId.contains("/")) {
@@ -140,17 +138,8 @@ public class View {
 		InputStream instream = null;
 		try {  
 			Reader reader = new InputStreamReader(instream = queryForStream(), StandardCharsets.UTF_8);
-			JsonArray jsonArray = JsonParser.parseReader(reader)
-					.getAsJsonObject().getAsJsonArray("rows");
 			List<T> list = new ArrayList<T>();
-			for (JsonElement jsonElem : jsonArray) {
-				JsonElement elem = jsonElem.getAsJsonObject();
-				if(Boolean.TRUE.equals(this.includeDocs)) {
-					elem = jsonElem.getAsJsonObject().get("doc");
-				}
-				T t = this.gson.fromJson(elem, classOfT);
-				list.add(t);
-			}
+			serializer.extractRowToList(reader, classOfT, list, this.includeDocs);
 			return list;
 		} finally {
 			close(instream);
@@ -171,27 +160,7 @@ public class View {
 		InputStream instream = null;
 		try {  
 			Reader reader = new InputStreamReader(instream = queryForStream(), StandardCharsets.UTF_8);
-			JsonObject json = JsonParser.parseReader(reader).getAsJsonObject(); 
-			ViewResult<K, V, T> vr = new ViewResult<K, V, T>();
-			vr.setTotalRows(getAsLong(json, "total_rows")); 
-			vr.setOffset(getAsInt(json, "offset"));
-			vr.setUpdateSeq(getAsString(json, "update_seq"));
-			JsonArray jsonArray = json.getAsJsonArray("rows");
-			for (JsonElement e : jsonArray) {
-				ViewResult<K, V, T>.Rows row = vr.new Rows();
-				row.setId(JsonToObject(gson, e, "id", String.class));
-				if (classOfK != null) {
-				    row.setKey(JsonToObject(gson, e, "key", classOfK));
-				}
-				if (classOfV != null) {
-				    row.setValue(JsonToObject(gson, e, "value", classOfV));
-				}
-				if(Boolean.TRUE.equals(this.includeDocs)) {
-					row.setDoc(JsonToObject(gson, e, "doc", classOfT));
-				}
-				vr.getRows().add(row);
-			}
-			return vr;
+			return serializer.handleViewResult(reader, includeDocs, classOfK, classOfV, classOfT);
 		} finally {
 			close(instream);
 		}
@@ -232,12 +201,7 @@ public class View {
 		InputStream instream = null;
 		try {  
 			Reader reader = new InputStreamReader(instream = queryForStream(), StandardCharsets.UTF_8);
-			JsonArray array = JsonParser.parseReader(reader).
-							getAsJsonObject().get("rows").getAsJsonArray();
-			if(array.size() != 1) { 
-				throw new NoDocumentException("Expecting a single result but was: " + array.size());
-			}
-			return JsonToObject(gson, array.get(0), "value", classOfV);
+			return serializer.getQueryValue(reader, classOfV);
 		} finally {
 			close(instream);
 		}
@@ -264,16 +228,16 @@ public class View {
 		String action;
 		try {
 			// extract fields from the returned HEXed JSON object
-			final JsonObject json = JsonParser.parseString(new String(java.util.Base64.getDecoder().decode(param.getBytes()))).getAsJsonObject();
+			final JeT json = serializer.parseJson(new String(java.util.Base64.getDecoder().decode(param.getBytes())));
 			if(log.isDebugEnabled()) {
 				log.debug("Paging Param Decoded = " + json);
 			}
-			final JsonObject jsonCurrent = json.getAsJsonObject(CURRENT_KEYS);
-			currentStartKey = jsonCurrent.get(CURRENT_START_KEY).getAsString();
-			currentStartKeyDocId = jsonCurrent.get(CURRENT_START_KEY_DOC_ID).getAsString();
-			startKey = json.get(START_KEY).getAsString();
-			startKeyDocId = json.get(START_KEY_DOC_ID).getAsString();
-			action = json.get(ACTION).getAsString();
+			final JoT jsonCurrent = serializer.toJsonObject(serializer.getKeyFromObject(json, CURRENT_KEYS));
+			currentStartKey = serializer.getAsString(jsonCurrent, CURRENT_START_KEY);
+			currentStartKeyDocId = serializer.getAsString(jsonCurrent, CURRENT_START_KEY_DOC_ID);
+			startKey = serializer.getAsString(serializer.toJsonObject(json), START_KEY);
+			startKeyDocId = serializer.getAsString(serializer.toJsonObject(json), START_KEY_DOC_ID);
+			action = serializer.getAsString(serializer.toJsonObject(json), ACTION);
 		} catch (Exception e) {
 			throw new CouchDbException("could not parse the given param!", e);
 		}
@@ -305,21 +269,21 @@ public class View {
 		final int offset = vr.getOffset();
 		final long totalRows = vr.getTotalRows();
 		// holds page params
-		final JsonObject currentKeys = new JsonObject();
-		final JsonObject jsonNext = new JsonObject();
-		final JsonObject jsonPrev = new JsonObject();
-		currentKeys.addProperty(CURRENT_START_KEY, rows.get(0).getKey());
-		currentKeys.addProperty(CURRENT_START_KEY_DOC_ID, rows.get(0).getId());
+		final var currentKeys = new HashMap<String, Object>();
+		final var jsonNext = new HashMap<String, Object>();
+		final var jsonPrev = new HashMap<String, Object>();
+		currentKeys.put(CURRENT_START_KEY, rows.get(0).getKey());
+		currentKeys.put(CURRENT_START_KEY_DOC_ID, rows.get(0).getId());
 		for (int i = 0; i < resultRows; i++) {
 			// set keys for the next page
 			if (i == resultRows - 1) { // last element (i.e rowsPerPage + 1)
 				if(resultRows > rowsPerPage) { // if not last page
 					page.setHasNext(true);
-					jsonNext.addProperty(START_KEY, rows.get(i).getKey());
-					jsonNext.addProperty(START_KEY_DOC_ID, rows.get(i).getId());
-					jsonNext.add(CURRENT_KEYS, currentKeys);
-					jsonNext.addProperty(ACTION, NEXT); 
-					page.setNextParam(Base64.getUrlEncoder().encodeToString(jsonNext.toString().getBytes()));
+					jsonNext.put(START_KEY, rows.get(i).getKey());
+					jsonNext.put(START_KEY_DOC_ID, rows.get(i).getId());
+					jsonNext.put(CURRENT_KEYS, currentKeys);
+					jsonNext.put(ACTION, NEXT);
+					page.setNextParam(Base64.getUrlEncoder().encodeToString(serializer.toJson(jsonNext).getBytes()));
 					continue; // exclude 
 				} 
 			}
@@ -328,11 +292,11 @@ public class View {
 		// set keys for the previous page
 		if(offset != 0) { // if not first page
 			page.setHasPrevious(true);
-			jsonPrev.addProperty(START_KEY, currentStartKey);
-			jsonPrev.addProperty(START_KEY_DOC_ID, currentStartKeyDocId);
-			jsonPrev.add(CURRENT_KEYS, currentKeys);
-			jsonPrev.addProperty(ACTION, PREVIOUS); 
-			page.setPreviousParam(Base64.getUrlEncoder().encodeToString(jsonPrev.toString().getBytes()));
+			jsonPrev.put(START_KEY, currentStartKey);
+			jsonPrev.put(START_KEY_DOC_ID, currentStartKeyDocId);
+			jsonPrev.put(CURRENT_KEYS, currentKeys);
+			jsonPrev.put(ACTION, PREVIOUS);
+			page.setPreviousParam(Base64.getUrlEncoder().encodeToString(serializer.toJson(jsonPrev).getBytes()));
 		}
 		// calculate paging display info
 		page.setResultList(pageList);
@@ -365,21 +329,21 @@ public class View {
 		final long totalRows = vr.getTotalRows();
 		Collections.reverse(rows); // fix order
 		// holds page params
-		final JsonObject currentKeys = new JsonObject();
-		final JsonObject jsonNext = new JsonObject();
-		final JsonObject jsonPrev = new JsonObject();
-		currentKeys.addProperty(CURRENT_START_KEY, rows.get(0).getKey());
-		currentKeys.addProperty(CURRENT_START_KEY_DOC_ID, rows.get(0).getId());
+		final var currentKeys = new HashMap<String, Object>();
+		final var jsonNext = new HashMap<String, Object>();
+		final var jsonPrev = new HashMap<String, Object>();
+		currentKeys.put(CURRENT_START_KEY, rows.get(0).getKey());
+		currentKeys.put(CURRENT_START_KEY_DOC_ID, rows.get(0).getId());
 		for (int i = 0; i < resultRows; i++) {
 			// set keys for the next page
 			if (i == resultRows - 1) { // last element (i.e rowsPerPage + 1)
 				if(resultRows >= rowsPerPage) { // if not last page
 					page.setHasNext(true);
-					jsonNext.addProperty(START_KEY, rows.get(i).getKey());
-					jsonNext.addProperty(START_KEY_DOC_ID, rows.get(i).getId());
-					jsonNext.add(CURRENT_KEYS, currentKeys);
-					jsonNext.addProperty(ACTION, NEXT); 
-					page.setNextParam(Base64.getUrlEncoder().encodeToString(jsonNext.toString().getBytes()));
+					jsonNext.put(START_KEY, rows.get(i).getKey());
+					jsonNext.put(START_KEY_DOC_ID, rows.get(i).getId());
+					jsonNext.put(CURRENT_KEYS, currentKeys);
+					jsonNext.put(ACTION, NEXT);
+					page.setNextParam(Base64.getUrlEncoder().encodeToString(serializer.toJson(jsonNext).getBytes()));
 					continue; 
 				}
 			}
@@ -388,11 +352,11 @@ public class View {
 		// set keys for the previous page
 		if(offset != (totalRows - rowsPerPage - 1)) { // if not first page
 			page.setHasPrevious(true);
-			jsonPrev.addProperty(START_KEY, currentStartKey);
-			jsonPrev.addProperty(START_KEY_DOC_ID, currentStartKeyDocId);
-			jsonPrev.add(CURRENT_KEYS, currentKeys);
-			jsonPrev.addProperty(ACTION, PREVIOUS); 
-			page.setPreviousParam(Base64.getUrlEncoder().encodeToString(jsonPrev.toString().getBytes()));
+			jsonPrev.put(START_KEY, currentStartKey);
+			jsonPrev.put(START_KEY_DOC_ID, currentStartKeyDocId);
+			jsonPrev.put(CURRENT_KEYS, currentKeys);
+			jsonPrev.put(ACTION, PREVIOUS);
+			page.setPreviousParam(Base64.getUrlEncoder().encodeToString(serializer.toJson(jsonPrev).getBytes()));
 		}
 		// calculate paging display info
 		page.setResultList(pageList);
@@ -482,7 +446,7 @@ public class View {
 	 * @return {@link View}
 	 */
 	public View descending(Boolean descending) {
-		this.descending = Boolean.valueOf(gson.toJson(descending));
+		this.descending = Boolean.valueOf(dbc.getSerializer().toJson(descending));
 		uriBuilder.query("descending", this.descending);
 		return this;
 	}
@@ -566,11 +530,11 @@ public class View {
 	 * @return {@link View}
 	 */
 	public View keys(List<?> keys) {
-		this.allDocsKeys = String.format("{%s:%s}", gson.toJson("keys"), gson.toJson(keys));
+		this.allDocsKeys = String.format("{%s:%s}", serializer.toJson("keys"), serializer.toJson(keys));
 		return this;
 	}
 	
 	private String getKeyAsJson(Object... key) {
-		return (key.length == 1) ? gson.toJson(key[0]) : gson.toJson(key); // single or complex key
+		return (key.length == 1) ? serializer.toJson(key[0]) : serializer.toJson(key); // single or complex key
 	}
 }

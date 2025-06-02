@@ -17,17 +17,15 @@
 package org.lightcouch.tests;
 
 
-import static org.hamcrest.CoreMatchers.is;
-import static org.hamcrest.MatcherAssert.assertThat;
+import org.junit.Test;
+import org.lightcouch.Response;
 
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
-import org.junit.Test;
-import org.lightcouch.Response;
-
-import com.google.gson.JsonObject;
+import static org.hamcrest.CoreMatchers.is;
+import static org.hamcrest.MatcherAssert.assertThat;
 
 public class BulkDocumentTest extends CouchDbTestBase {
 	
@@ -35,7 +33,7 @@ public class BulkDocumentTest extends CouchDbTestBase {
 	public void bulkModifyDocs() {
 		List<Object> newDocs = new ArrayList<Object>();
 		newDocs.add(new Foo());
-		newDocs.add(new JsonObject());
+		newDocs.add(new Foo());
 
 		List<Response> responses = dbClient.bulk(newDocs, true);
 		
